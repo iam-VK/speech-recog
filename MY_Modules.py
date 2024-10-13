@@ -13,6 +13,17 @@ def prepare_output_dir(output_path:str):
     
     return output_path
 
+def vidName_from_path(vid_dir_path:str="Videos"):
+    '''Extract only video name from the dir of videos
+    args:
+    path to Videos directory  
+    
+    output:
+    returns a list of video file names
+    '''
+    vid_files = glob.glob(vid_dir_path+'/*')
+    return [name.replace(".mp4","").replace(vid_dir_path,"").replace("\\","").replace("/","") for name in vid_files]
+
 def file_name_extract(file_path):
     file_name = os.path.basename(file_path)
     file_name_without_extension, _ = os.path.splitext(file_name)

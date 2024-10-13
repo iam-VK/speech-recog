@@ -8,25 +8,27 @@ from MY_Modules import file_name_extract
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-model_id = "C:\\Users\\vishw\\Downloads\\whisper-medium"
-model = AutoModelForSpeechSeq2Seq.from_pretrained(
-                                        model_id, 
-                                        torch_dtype=torch_dtype, 
-                                        low_cpu_mem_usage=True
-)
-processor = AutoProcessor.from_pretrained(model_id)
-model.to(device)
+def load_model(model_id):
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                                            model_id, 
+                                            torch_dtype=torch_dtype, 
+                                            low_cpu_mem_usage=True
+    )
+    processor = AutoProcessor.from_pretrained(model_id)
+    model.to(device)
 
-pipe = pipeline(
-    "automatic-speech-recognition",
-    model=model,
-    tokenizer=processor.tokenizer,
-    feature_extractor=processor.feature_extractor,
-    chunk_length_s=30,
-    batch_size=16,
-    torch_dtype=torch_dtype,
-    device=device,
-)
+    pipe = pipeline(
+        "automatic-speech-recognition",
+        model=model,
+        tokenizer=processor.tokenizer,
+        feature_extractor=processor.feature_extractor,
+        chunk_length_s=30,
+        batch_size=16,
+        torch_dtype=torch_dtype,
+        device=device,
+    )
+
+    return pipe
 
 def load_audio(file_path, target_sample_rate=16000):
     waveform, sample_rate = sf.read(file_path)
@@ -43,12 +45,16 @@ def load_audio(file_path, target_sample_rate=16000):
     
     return waveform
 
-def audio_to_transcript(filename):
+def speech_recog(filename):
     _, filename = file_name_extract(filename)
     audio = load_audio(file_path=f"./audios/{filename}.wav")
 
     # Convert the PyTorch Tensor to a NumPy ndarray
     audio_numpy = audio.numpy()
-    result = pipe(audio_numpy)
 
-    return result["text"]
+    model_id = "Models/whisper-medium"
+    pipe = load_model(model_id)
+
+    result = pipe(audio_numpy)
+    transcription = result["text"]
+    return transcription
