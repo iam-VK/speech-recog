@@ -81,24 +81,24 @@ def category_To_category_id(category_name:str):
         return category_id[0]
 
 
-def video_To_video_id(video_name:str):
+def video_To_file_id(file_name:str):
     try:
         dbcursor = db.cursor()
-        query = f"SELECT video_id from videos WHERE file_name='{video_name}'"
+        query = f"SELECT file_id from videos WHERE file_name='{file_name}'"
         dbcursor.execute(query)
-        video_id = dbcursor.fetchone()
+        file_id = dbcursor.fetchone()
         
     except mysql.connector.Error as error:
-        print("Error extracting video_id from videos table:", error)
+        print("Error extracting file_id from videos table:", error)
     finally:
         dbcursor.close()
-        return video_id[0]
+        return file_id[0]
 
 
-def check_indexed_state(video_name:str):
+def check_index_state(file_name:str):
     dbcursor = db.cursor()
     try:
-        query = f"SELECT index_state from videos WHERE file_name='{video_name}'"
+        query = f"SELECT index_state from videos WHERE file_name='{file_name}'"
         dbcursor.execute(query)
         index_state = dbcursor.fetchone()
 
@@ -110,26 +110,42 @@ def check_indexed_state(video_name:str):
         return index_state[0]
 
 
+def set_index_state(file_name:str, state:str):
+    dbcursor = db.cursor()
+    try:
+        query = f"UPDATE videos SET index_state = '{state}' WHERE file_name = '{file_name}';"
+        print(query)
+        dbcursor.execute(query)
+
+    except mysql.connector.Error as error:
+        print("Error setting index_state:", error)
+
+    finally:
+        db.commit()
+        dbcursor.close()
+        return {"response":f"{state} set"}
+
+
 def sort_video_categories_table():
     dbcursor = db.cursor()
     
     try:
         count_frequency = '''UPDATE video_categories AS vc
                 INNER JOIN (
-                SELECT video_id, category_id, COUNT(*) AS frequency
+                SELECT file_id, category_id, COUNT(*) AS frequency
                 FROM video_categories
-                GROUP BY video_id, category_id
+                GROUP BY file_id, category_id
                 ) AS freq_table
-                ON vc.video_id = freq_table.video_id AND vc.category_id = freq_table.category_id
+                ON vc.file_id = freq_table.file_id AND vc.category_id = freq_table.category_id
                 SET vc.frequency = freq_table.frequency;'''
         sort_table = '''ALTER TABLE video_categories
-                    ORDER BY video_id, frequency DESC;'''
+                    ORDER BY file_id, frequency DESC;'''
         create_view = '''CREATE VIEW video_index AS
-                SELECT videos.video_id, videos.file_name, videos.file_path, categories.category_id ,categories.category_name, COUNT(*) AS frequency
+                SELECT videos.file_id, videos.file_name, videos.file_path, categories.category_id ,categories.category_name, COUNT(*) AS frequency
                 FROM videos
-                LEFT JOIN video_categories ON videos.video_id = video_categories.video_id
+                LEFT JOIN video_categories ON videos.file_id = video_categories.file_id
                 LEFT JOIN categories ON video_categories.category_id = categories.category_id
-                GROUP BY videos.video_id, videos.file_name, categories.category_name, categories.category_id;'''
+                GROUP BY videos.file_id, videos.file_name, categories.category_name, categories.category_id;'''
         
         
         dbcursor.execute(count_frequency)
@@ -159,7 +175,7 @@ def insert_video_categories(json_file):
             indexed_data = json.load(file)
      
         for i in range(0,len(indexed_data["keyframes_classified"])):
-            video_id = video_To_video_id(indexed_data["src_file"])
+            file_id = video_To_file_id(indexed_data["src_file"])
             category_name = ""
 
             category_list = indexed_data["keyframes_classified"][f'{i}']["category"]
@@ -169,10 +185,10 @@ def insert_video_categories(json_file):
                     category_name+=", "
 
             category_id = category_To_category_id(category_name)
-            query = f"INSERT INTO video_categories (video_id, category_id) VALUES ('{video_id}','{category_id}');"
+            query = f"INSERT INTO video_categories (file_id, category_id) VALUES ('{file_id}','{category_id}');"
             dbcursor.execute(query)
 
-            query = f"UPDATE videos SET index_state = 1 WHERE video_id = {video_id};"
+            query = f"UPDATE videos SET index_state = 1 WHERE file_id = {file_id};"
             dbcursor.execute(query)
         print(f"$$ New video {indexed_data["src_file"]} indexed")
         sort_video_categories_table()
@@ -215,3 +231,4 @@ def search_video(search_tag:str):
 # insert_video_categories("market")
 # search_video("pencil")
 # sort_video_categories_table()
+# set_index_state("DIML_2", "vsn-sph")

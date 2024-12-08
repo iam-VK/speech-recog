@@ -56,5 +56,5 @@ def speech_recog(filename):
     pipe = load_model(model_id)
 
     result = pipe(audio_numpy)
-    transcription = result["text"]
+    transcription = str(result["text"])
     return transcription

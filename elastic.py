@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch
-from mysql_DB import video_To_video_id
+from mysql_DB import video_To_file_id
 from MY_Modules import file_name_extract
 
 client = Elasticsearch(
@@ -11,13 +11,13 @@ client = Elasticsearch(
 
 def insert_into_elastic(filename, transcription):
     _, filename_without_extension = file_name_extract(filename)
-    video_id = video_To_video_id(filename_without_extension)
+    file_id = video_To_file_id(filename_without_extension)
     doc = {
         "file_name":filename,
-        "video_id":video_id,
+        "video_id":file_id, ## TODO change video_id to file_id in elastic db
         "transcription":transcription
     }
 
-    resp = client.index(index="transcription-index", document=doc, id=video_id)
+    resp = client.index(index="transcription-index", document=doc, id=file_id)
     print("response from elastic: ",resp)
     return resp
